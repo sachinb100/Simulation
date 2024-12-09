@@ -1,79 +1,71 @@
 from django.core.management.base import BaseCommand
 from multitask.models import User, Products, Order
-from random import randint
-# from threading import Thread
-from django.db import connections
-import threading
-from django.db import transaction
+import random
+from threading import Thread
+
 class Command(BaseCommand):
-        help = 'Simulate multiple insertions into different databases'
+    help = 'Simulate simultaneous insertions into Users, Orders, and Products'
 
-        def insert_user(self,index):
-            user = User(id=index, name=f'User{index}', email=f'user{index}@example.com')
-            user.save(using='users_db')
+    def insert_users(self):
+        users_data = [
+            (1, "Alice", "alice@example.com"),
+            (2, "Bob", "bob@example.com"),
+            (3, "Charlie", "charlie@example.com"),
+            (4, "David", "david@example.com"),
+            (5, "Eve", "eve@example.com"),
+            (6, "Frank", "frank@example.com"),
+            (7, "Grace", "grace@example.com"),
+            (8, "Alicey", "alicey@example.com"),
+            (9, "Henry", "henry@example.com"),
+            (10, "Jane", "jane@example.com")
+        ]
+        for user_data in users_data:
+            User.objects.using('users_db').create(id=user_data[0], name=user_data[1], email=user_data[2])
 
-        def insert_product(self,index):
-            
+    def insert_products(self):
+        products_data = [
+            (1, "Laptop", 1000.00),
+            (2, "Smartphone", 700.00),
+            (3, "Headphones", 150.00),
+            (4, "Monitor", 300.00),
+            (5, "Keyboard", 50.00),
+            (6, "Mouse", 30.00),
+            (7, "Laptop", 1000.00),
+            (8, "Smartwatch", 250.00),
+            (9, "Gaming Chair", 500.00),
+            (10, "Earbuds", -50.00)
+        ]
+        for product_data in products_data:
+            Products.objects.using('products_db').create(id=product_data[0], name=product_data[1], price=product_data[2])
 
-            print(f"Starting insertion for product {index}")
-            try:
-                product = Products(id=index, name=f'Products{index}', price=100.0 * index)
-                product.save(using='products_db')
-                print(f"Successfully inserted product {index}")
-            except Exception as e:
-                print(f"Error inserting product {index}: {e}")
+    def insert_orders(self):
+        orders_data = [
+            (1, 1, 1, 2),
+            (2, 2, 2, 2),
+            (3, 3, 3, 5),
+            (4, 4, 4, 1),
+            (5, 5, 5, 3),
+            (6, 6, 6, 4),
+            (7, 7, 7, 2),
+            (8, 8, 8, 0),
+            (9, 9, 9, 1),
+            (10, 10, 10, 2)
+        ]
+        for order_data in orders_data:
+            Order.objects.using('orders_db').create(id=order_data[0], user=order_data[1], product=order_data[2], quantity=order_data[3])
 
-    
-        def insert_order(self,index):
-            user_id =  index
-            product_id = index
-            # Fetch the User and Product instances
-            user = User.objects.using('users_db').filter(id=user_id).first()
-            product = Products.objects.using('products_db').filter(id=product_id).first()
+    def run_insertions(self):
+        # Using threads to simulate simultaneous insertions
+        threads = []
+        for func in [self.insert_users, self.insert_products, self.insert_orders]:
+            thread = Thread(target=func)
+            threads.append(thread)
+            thread.start()
 
-             # Check if both user and product exist in their respective databases
-            if User.objects.using('users_db').filter(id=user_id).exists() and Products.objects.using('products_db').filter(id=product_id).exists():
-                # Directly use the user_id and product_id (not model instances)
-                order = Order(id=index, user=user_id, product=product_id, quantity=randint(1, 5))
-                order.save(using='orders_db')
-                print(f"Order for User {user_id} and Product {product_id} inserted successfully.")
-            else:
-                print(f"User or Product with id {user_id} or {product_id} does not exist.")
+        for thread in threads:
+            thread.join()
 
+        self.stdout.write(self.style.SUCCESS('Simulated insertions completed'))
 
-
-
-           
-
-
-
-        def run_inserts(self):
-            threads = []
-
-            for i in range(1,11):
-                t_user = threading.Thread(target=self.insert_user, args=(i,))
-                t_product = threading.Thread(target=self.insert_product, args=(i,))
-        
-
-                t_user.start()
-                t_product.start()
-
-                t_user.join()
-                t_product.join()
-
-                t_order = threading.Thread(target=self.insert_order, args=(i,))
-
-                t_order.start()
-                threads.append(t_order)
-
-              
-
-                for thread in threads:
-                    thread.join()
-
-                self.stdout.write(self.style.SUCCESS('Data inserted successfully into all databases!'))
-
-
-        def handle(self, *args, **options):
-            self.run_inserts()
-           
+    def handle(self, *args, **kwargs):
+        self.run_insertions()
