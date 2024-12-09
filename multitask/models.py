@@ -29,6 +29,8 @@ class Order(models.Model):
     id=models.AutoField(primary_key=True)
     user=models.IntegerField()
     product=models.IntegerField()
+    # user = models.ForeignKey(User, on_delete=models.CASCADE)
+    # product = models.ForeignKey(Products, on_delete=models.CASCADE)
     quantity=models.PositiveIntegerField()
 
     class Meta:
